@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#111317">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Buzz! buzzer</title>
+<style>
+  :root {
+    --bg: #111317; --body: #1d2026; --edge: #2c3038; --ink: #f2f3f5; --muted: #8b90a0;
+    --red: #e3242b; --blue: #2f7df6; --orange: #ff8a1f; --green: #2fbf5b; --yellow: #ffd400;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden;
+    font: 600 16px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; overscroll-behavior: none; }
+  main { height: 100%; display: flex; flex-direction: column; align-items: center;
+    padding: max(10px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom)); gap: 10px; }
+  header { width: 100%; max-width: 420px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .who { display: flex; align-items: center; gap: 10px; font-size: 18px; }
+  .num { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-size: 20px;
+    background: #2a2e36; border: 2px solid #3a3f49; }
+  .net { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #c0392b; }
+  .dot.ok { background: #2fbf5b; }
+  .pad { flex: 1; width: 100%; max-width: 420px; min-height: 0; display: flex; flex-direction: column; gap: 18px;
+    padding: 16px 18px 18px; border-radius: 34px 34px 46px 46px; background: linear-gradient(180deg, #23262d, var(--body));
+    border: 2px solid var(--edge); box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); }
+  .dome-wrap { flex: 0.8; min-height: 0; display: grid; place-items: center; }
+  .btn { position: relative; border: 0; color: rgba(0,0,0,.55); font: inherit; letter-spacing: .06em; text-transform: uppercase;
+    transition: transform .05s, filter .05s, box-shadow .05s; }
+  .dome { width: min(72%, 30vh); aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle at 38% 30%, #ff8a8f 0 8%, #f0353c 22%, #b3121a 62%, #6f0a0f 100%);
+    box-shadow: 0 10px 0 #5a070b, 0 18px 28px rgba(0,0,0,.6), inset 0 -10px 24px rgba(0,0,0,.35);
+    color: rgba(255,255,255,.85); font-size: 22px; }
+  .dome.lit { box-shadow: 0 10px 0 #5a070b, 0 0 40px 14px rgba(255,60,60,.75), 0 0 90px 30px rgba(255,40,40,.35), inset 0 -10px 24px rgba(0,0,0,.25);
+    filter: brightness(1.35) saturate(1.1); }
+  .dome.down { transform: translateY(8px); box-shadow: 0 2px 0 #5a070b, 0 6px 14px rgba(0,0,0,.6), inset 0 -6px 18px rgba(0,0,0,.4); }
+  .bars { flex: 1.35; min-height: 0; display: grid; grid-template-rows: repeat(4, 1fr); gap: 16px; }
+  .bar { border-radius: 18px; font-size: 17px; min-height: 56px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.45), 0 10px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35); }
+  .bar.down { transform: translateY(5px); box-shadow: 0 1px 0 rgba(0,0,0,.45), 0 3px 8px rgba(0,0,0,.35); filter: brightness(1.15); }
+  .blue { background: linear-gradient(180deg, #5b9bff, var(--blue)); }
+  .orange { background: linear-gradient(180deg, #ffab5c, var(--orange)); }
+  .green { background: linear-gradient(180deg, #5fdc85, var(--green)); }
+  .yellow { background: linear-gradient(180deg, #ffe45c, var(--yellow)); }
+  .full { position: fixed; inset: 0; display: none; place-items: center; text-align: center; padding: 30px;
+    background: rgba(10,11,14,.92); font-size: 18px; z-index: 5; }
+  .full.on { display: grid; }
+  .full small { display: block; margin-top: 10px; color: var(--muted); font-weight: 500; font-size: 14px; }
+  .pick { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; max-width: 260px; margin: 16px auto 0; }
+  .pick button { width: 52px; height: 52px; border-radius: 50%; border: 2px solid #3a3f49; background: #2a2e36; color: var(--ink); font: inherit; font-size: 20px; }
+  .pick button:disabled { opacity: .35; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="who"><div class="num" id="num">–</div><span id="label">Connecting…</span></div>
+    <div class="net"><span class="dot" id="dot"></span><span id="ping">offline</span></div>
+  </header>
+  <section class="pad" id="pad">
+    <div class="dome-wrap"><button class="btn dome" data-b="red" id="dome">Buzz!</button></div>
+    <div class="bars">
+      <button class="btn bar blue" data-b="blue">Blue</button>
+      <button class="btn bar orange" data-b="orange">Orange</button>
+      <button class="btn bar green" data-b="green">Green</button>
+      <button class="btn bar yellow" data-b="yellow">Yellow</button>
+    </div>
+  </section>
+</main>
+<div class="full" id="full"><div><span id="fullText">All buzzers are taken.</span><small id="fullSmall">Wait for a free one or pick one below.</small><div class="pick" id="pick"></div></div></div>
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+let ws = null, me = null, first = 1, players = 4, taken = [], lights = [];
+const query = new URLSearchParams(location.search);
+// test mode (/test page, several controllers in one browser): every page is its own phone
+const testMode = query.has("test");
+let want = Number(query.get("p")) || (testMode ? 0 : Number(sessionStorage.getItem("buzz-p"))) || 0;
+let retry = 0, pingTimer = null;
+// this browser's token: a refreshed page is the same phone (and gets its buzzer back)
+let token = "";
+if (testMode) token = Math.random().toString(36).slice(2, 12);
+else try { token = localStorage.getItem("buzz-id") || ""; if (!token) { token = Math.random().toString(36).slice(2, 12); localStorage.setItem("buzz-id", token); } } catch (_) {}
+const held = new Map(); // pointerId -> button name
+const count = {};       // button name -> pointers holding it
+
+function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+function press(b, down) {
+  count[b] = Math.max(0, (count[b] || 0) + (down ? 1 : -1));
+  const on = count[b] > 0;
+  document.querySelectorAll(`[data-b="${b}"]`).forEach(e => e.classList.toggle("down", on));
+  if (down && count[b] === 1) { send({ t: "b", b, d: true }); if (navigator.vibrate) navigator.vibrate(12); }
+  if (!down && count[b] === 0) send({ t: "b", b, d: false });
+}
+function releaseAll() {
+  for (const b of Object.keys(count)) if (count[b] > 0) { count[b] = 1; press(b, false); }
+  held.clear();
+}
+// multi-touch: every finger is a pointer, a finger sliding off a button keeps it held until it lifts
+document.querySelectorAll("[data-b]").forEach(el => {
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    el.setPointerCapture(e.pointerId);
+    held.set(e.pointerId, el.dataset.b);
+    press(el.dataset.b, true);
+  });
+});
+const up = e => { const b = held.get(e.pointerId); if (b) { held.delete(e.pointerId); press(b, false); } };
+addEventListener("pointerup", up);
+addEventListener("pointercancel", up);
+addEventListener("contextmenu", e => e.preventDefault());
+addEventListener("blur", releaseAll);
+document.addEventListener("visibilitychange", () => { if (document.hidden) releaseAll(); });
+// keyboard for testing on a PC: space/enter = buzz, 1-4 = colours
+const keys = { " ": "red", Enter: "red", "1": "blue", "2": "orange", "3": "green", "4": "yellow" };
+addEventListener("keydown", e => { const b = keys[e.key]; if (b && !e.repeat) press(b, true); });
+addEventListener("keyup", e => { const b = keys[e.key]; if (b) press(b, false); });
+if (!testMode) addEventListener("pointerdown", () => { const d = document.documentElement; if (!document.fullscreenElement && d.requestFullscreen) d.requestFullscreen().catch(() => {}); }, { once: true });
+
+function render() {
+  $("#num").textContent = me || "–";
+  const set = me && (players > 4 || first > 1) ? ` · set ${Math.ceil(me / 4)}` : "";
+  $("#label").textContent = me ? `Buzzer ${me}${set}` : (ws && ws.readyState === 1 ? "No buzzer free" : "Connecting…");
+  $("#dome").classList.toggle("lit", !!(me && lights[me - first]));
+  const full = ws && ws.readyState === 1 && !me;
+  $("#full").classList.toggle("on", !!full);
+  const pick = $("#pick");
+  $("#fullText").textContent = `All ${players} buzzers are taken.`;
+  pick.replaceChildren(...Array.from({ length: players }, (_, i) => first + i).map(n => {
+    const b = document.createElement("button");
+    b.textContent = n; b.disabled = !!taken[n - first];
+    b.onclick = () => { want = n; if (!testMode) sessionStorage.setItem("buzz-p", n); ws && ws.close(); };
+    return b;
+  }));
+}
+function connect() {
+  const url = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws?d=${encodeURIComponent(token)}${want ? `&p=${want}` : ""}`;
+  ws = new WebSocket(url);
+  ws.onopen = () => { retry = 0; $("#dot").classList.add("ok"); render(); ping(); };
+  ws.onmessage = ev => {
+    const m = JSON.parse(ev.data);
+    if (m.t === "you") { me = m.player; players = m.players || players; first = m.first || 1; if (me) { want = me; if (!testMode) sessionStorage.setItem("buzz-p", me); } }
+    else if (m.t === "status") { taken = m.taken; lights = m.lights; }
+    else if (m.t === "pong") { showPing(performance.now() - m.c); }
+    render();
+  };
+  ws.onclose = () => {
+    releaseAll(); me = null; $("#dot").classList.remove("ok"); $("#ping").textContent = "offline"; render();
+    clearTimeout(pingTimer);
+    setTimeout(connect, Math.min(4000, 300 * 2 ** retry++));
+  };
+}
+// A packet every 250 ms keeps the phone's Wi-Fi from dozing off (power saving holds incoming
+// packets for up to ~1 s); the shown ping is the median of the last ones.
+const rtts = [];
+function ping() {
+  if (!document.hidden) send({ t: "ping", c: performance.now() });
+  clearTimeout(pingTimer); pingTimer = setTimeout(ping, 250);
+}
+function showPing(ms) {
+  rtts.push(ms); if (rtts.length > 8) rtts.shift();
+  const sorted = [...rtts].sort((a, b) => a - b);
+  $("#ping").textContent = `${Math.round(sorted[sorted.length >> 1])} ms`;
+}
+render();
+connect();
+</script>
+</body>
+</html>

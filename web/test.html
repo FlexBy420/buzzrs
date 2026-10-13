@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>buzzrs test</title>
+<style>
+  :root { --bg: #111317; --line: #2c3038; --ink: #f2f3f5; --muted: #8b90a0; --accent: #f6b51e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 12px 16px; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 20px; }
+  h1 span { color: var(--accent); }
+  .muted { color: var(--muted); }
+  select, a { font: inherit; color: var(--ink); }
+  select { background: #1b1e24; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+  .grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 10px; }
+  iframe { width: 100%; height: 100%; min-height: 300px; border: 1px solid var(--line); border-radius: 14px; background: #000; }
+  @media (max-width: 800px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 360px; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="row">
+    <h1>buzz<span>rs</span> test</h1>
+    <label class="muted">Buzzers <select id="count"></select></label>
+    <span class="muted">Each frame is one phone. Click the buttons with the mouse; the game sees the presses like from real phones.</span>
+    <a href="/host" target="_blank">Host page</a>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+"use strict";
+const grid = document.getElementById("grid"), count = document.getElementById("count");
+const params = new URLSearchParams(location.search);
+let max = 8, first = 1;
+function build(n) {
+  grid.replaceChildren(...Array.from({ length: n }, (_, i) => {
+    const f = document.createElement("iframe");
+    f.src = `/?test=1&p=${first + i}`;
+    f.title = `Buzzer ${first + i}`;
+    return f;
+  }));
+  history.replaceState(null, "", `?n=${n}`);
+}
+const ws = new WebSocket(`ws://${location.host}/ws?host=1`);
+ws.onmessage = ev => {
+  const m = JSON.parse(ev.data);
+  if (m.t !== "host") return;
+  ws.close();
+  max = m.players || 8;
+  first = m.first || 1;
+  count.replaceChildren(...Array.from({ length: max }, (_, i) => new Option(i + 1, i + 1)));
+  const n = Math.min(max, Number(params.get("n")) || max);
+  count.value = n;
+  build(n);
+};
+count.onchange = () => build(Number(count.value));
+</script>
+</body>
+</html>

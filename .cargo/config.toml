@@ -1,0 +1,10 @@
+# Android phones (Termux, root): one static binary, no NDK needed.
+#   cargo build --release --target armv7-unknown-linux-musleabihf   (32-bit userland, e.g. Galaxy J7 2017)
+#   cargo build --release --target aarch64-unknown-linux-musl       (64-bit)
+[target.armv7-unknown-linux-musleabihf]
+linker = "rust-lld"
+rustflags = ["-C", "linker-flavor=ld.lld", "-C", "link-self-contained=yes", "-C", "target-feature=+crt-static"]
+
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"
+rustflags = ["-C", "linker-flavor=ld.lld", "-C", "link-self-contained=yes", "-C", "target-feature=+crt-static"]
